@@ -6,7 +6,7 @@ class Animation {
 
         Animation(const char* name)
         {
-        	this->name = name;
+            this->name = name;
         };
         
         virtual void Setup() = 0;

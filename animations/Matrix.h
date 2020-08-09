@@ -12,7 +12,6 @@ class Matrix : public Animation {
 
         void Loop()
         {
-            Serial.println("Matrix show()");
         }
 
 };

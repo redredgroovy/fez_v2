@@ -12,7 +12,6 @@ class Starfield : public Animation {
 
         void Loop()
         {
-            Serial.println("Starfield show()");
         }
 
 };
