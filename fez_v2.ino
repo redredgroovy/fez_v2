@@ -24,13 +24,13 @@
 // Third:  37, 36, 35, 34, 39, 38, 28, 31, 30
 //
 // For this project, we want four parallel lines so we pick the consecutive
-// group of pins 14, 15, 17, 16
+// group of pins 14, 15, 17, 16 starting at pin 14
 //
 #define FASTLED_ANCHOR_PIN 14
 
-// 60x16 matrix broken into 4 distinct "strips"
-#define LED_COLS 60
-#define LED_ROWS 16
+// 68x16 matrix broken into 4 distinct "strips"
+#define LED_COLS 64
+#define LED_ROWS 18
 #define NUM_STRIPS 4
 
 #define NUM_LEDS LED_COLS * LED_ROWS 
@@ -92,16 +92,18 @@ float gPeakCurrent = 0.0;
 // Animation objects
 //
 
-#include "animations/Starfield.h"
-#include "animations/Matrix.h"
-#include "animations/TwinkleFOX.h"
 #include "animations/FauxTV.h"
+#include "animations/Matrix.h"
+#include "animations/Null.h"
 #include "animations/Pacifica.h"
+#include "animations/Starfield.h"
+#include "animations/TwinkleFOX.h"
 
 Animation* gAnimations[] = {
-    new TwinkleFOX(),
     new FauxTV(),
-    new Pacifica()
+    new Null(),
+    new Pacifica(),
+    new TwinkleFOX()
 };
 Animation* gCurrentAnimation;
 
@@ -110,9 +112,9 @@ Animation* gCurrentAnimation;
 //
 
 //
-// Scan the names of each animation in the animation array
-// Return a pointer to the animation which matches the requested
-// name (or the first animation in the list as a fail-safe)
+// Scan the names of each animation in the animation array and
+// return a pointer to the animation which matches the requested
+// name
 //
 Animation* findAnimation(char* name)
 {
@@ -121,12 +123,14 @@ Animation* findAnimation(char* name)
             return gAnimations[i];
         }
     }
-    return gAnimations[0];
+    // Keep the current animation if no match was found
+    return gCurrentAnimation;
 }
 
 void parseCommand(char* input) {
     Serial.println(input);
-    
+
+    // Parse the inbound message as json
     StaticJsonDocument<255> doc;
     DeserializationError err = deserializeJson(doc, input);
     if( err ) {
@@ -134,13 +138,27 @@ void parseCommand(char* input) {
         return;
     }
 
+    // Iterate over each json key and take action
     for(JsonPair p: doc.as<JsonObject>()) {
+
+        // "brt" = Brightness
         if( p.key() == "brt") {
             FastLED.setBrightness(p.value());
+
+        // "fx" = Animation routine
         } else if( p.key() == "fx") {
+            if ( p.value() == gCurrentAnimation->Name() ) {
+                return;
+            }
             gCurrentAnimation = findAnimation(p.value());
             gCurrentAnimation->Setup();
+            FastLED.clear(true);
+
+        // "pal" = Palette 
+        } else if( p.key() == "pal") {
+            // TODO
         }
+
     }
 }
 
@@ -167,7 +185,6 @@ void readBluetooth()
                 memset(gBuffer,0,sizeof(gBuffer));
             }
         }
-
     }
 }
 
@@ -207,11 +224,9 @@ void setup()
     set_max_power_indicator_LED(LED_BUILTIN);
 
     FastLED.setBrightness(128);
+    FastLED.clear(true);
 
-    fill_solid(leds, NUM_LEDS, CRGB::Black);
-    FastLED.show();
-
-    gCurrentAnimation = findAnimation((char*)"pacifica");
+    gCurrentAnimation = findAnimation((char*)"null");
     gCurrentAnimation->Setup();
 
     //
@@ -262,6 +277,7 @@ void loop()
     }
 
     readBluetooth();
+
     gCurrentAnimation->Loop();
     FastLED.show();
 }
